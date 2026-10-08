@@ -147,3 +147,13 @@ def test_author_lookups_are_cached(setup):
 def test_warns_when_owner_is_not_author():
     m = Monitor(FakeClient([]), Store(":memory:"), default_owner="someone_else")
     assert "warning" in m.watch("post1")
+
+
+def test_command_with_question_word_on_later_line_is_not_a_question(setup):
+    m, _ = setup([c("x1", "lihaarp", "rm !(foo|bar)\n\nis equivalent to \"rm all except foo and bar\"")])
+    assert m.check()["posts"][0]["new_comments"][0]["signals"]["is_question"] is False
+
+
+def test_deleted_account_with_text_is_not_skipped(setup):
+    m, _ = setup([c("d1", "[deleted]", "Also GNU find understands negations, so -exec rm is simpler here.")])
+    assert m.check()["posts"][0]["new_comments"][0]["signals"]["suggested_bucket"] == "respond"

@@ -26,7 +26,7 @@ HOSTILE_PATTERNS = [
 ]
 QUESTION_START = re.compile(
     r"^\s*(how|what|why|when|where|which|who|is|are|does|do|did|can|could|would|should|will|have|has|any)\b",
-    re.I | re.M,
+    re.I,
 )
 
 NEW_ACCOUNT_DAYS = 30
@@ -88,7 +88,8 @@ def compute(comment: dict, by_id: dict[str, dict], owner: str, author_info: dict
         "caps_ratio": round(sum(ch.isupper() for ch in body) / max(1, sum(ch.isalpha() for ch in body)), 2),
         "is_bot": author.lower() in BOT_NAMES or author.lower().endswith("bot")
                   or comment.get("distinguished") == "moderator",
-        "removed": comment.get("removed", False) or author == "[deleted]",
+        # A deleted account can leave its comment text behind; only skip when the text is gone too.
+        "removed": comment.get("removed", False),
         "owner_turns_in_chain": owner_turns_in_chain(comment, by_id, owner) if reply_to_owner else 0,
         "author_comments_in_thread": sum(1 for c in by_id.values() if c["author"] == author),
     }
