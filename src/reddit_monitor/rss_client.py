@@ -133,13 +133,24 @@ class RSSClient:
     supports_author_info = False
     supports_threading = False
 
+    CACHE_SECONDS = 30  # watch -> check -> context in quick succession shares one fetch
+
     def __init__(self, user_agent: str | None = None, fetch=None, min_interval: float = 2.0):
         self.user_agent = user_agent or os.environ.get("REDDIT_USER_AGENT") or DEFAULT_UA
         self._fetch = fetch or self._http_get
         self.min_interval = min_interval
         self._last_request = 0.0
+        self._cache: dict[str, tuple[float, str]] = {}
 
-    def _http_get(self, url: str) -> str:
+    def _get(self, url: str) -> str:
+        hit = self._cache.get(url)
+        if hit and time.time() - hit[0] < self.CACHE_SECONDS:
+            return hit[1]
+        text = self._fetch(url)
+        self._cache[url] = (time.time(), text)
+        return text
+
+    def _http_get(self, url: str, retry: bool = True) -> str:
         wait = self.min_interval - (time.time() - self._last_request)
         if wait > 0:
             time.sleep(wait)
@@ -148,6 +159,10 @@ class RSSClient:
             with urllib.request.urlopen(req, timeout=20) as r:
                 return r.read().decode("utf-8")
         except urllib.error.HTTPError as e:
+            if e.code == 429 and retry:
+                delay = min(30.0, float(e.headers.get("Retry-After") or 10))
+                time.sleep(delay)
+                return self._http_get(url, retry=False)
             if e.code == 429:
                 raise RuntimeError("Reddit is rate limiting the feed (HTTP 429). Check less often.") from e
             if e.code in (403, 404):
@@ -159,7 +174,7 @@ class RSSClient:
 
     def _feed(self, url_or_id: str) -> tuple[dict, list[dict]]:
         url = _post_url(url_or_id) + ".rss?sort=new&limit=100"
-        post, comments = parse_feed(self._fetch(url))
+        post, comments = parse_feed(self._get(url))
         if post is None:
             raise RuntimeError(f"No post found in the feed for {url_or_id}.")
         post["num_comments"] = len(comments)

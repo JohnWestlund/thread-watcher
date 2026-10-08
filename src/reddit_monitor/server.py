@@ -9,10 +9,14 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import functools
+
 try:  # mcp >= 2
     from mcp.server.mcpserver import MCPServer as _Server
+    from mcp.server.mcpserver.exceptions import ToolError
 except ImportError:  # mcp 1.x
     from mcp.server.fastmcp import FastMCP as _Server
+    from mcp.server.fastmcp.exceptions import ToolError
 
 from .monitor import Monitor
 from .store import Store
@@ -35,7 +39,33 @@ Workflow (or use the `triage_and_draft` prompt):
    skipped/side-conversation comments.
 """
 
-server = _Server("reddit-monitor", instructions=INSTRUCTIONS)
+_server = _Server("reddit-monitor", instructions=INSTRUCTIONS)
+
+
+class _ToolRegistry:
+    """Registers tools so any exception reaches Claude as a readable message.
+    (MCP SDK v2 otherwise reports unexpected errors as just "Error executing tool".)"""
+
+    def tool(self):
+        def register(fn):
+            @functools.wraps(fn)
+            def wrapper(*args, **kwargs):
+                try:
+                    return fn(*args, **kwargs)
+                except ToolError:
+                    raise
+                except Exception as e:
+                    raise ToolError(f"{type(e).__name__}: {e}") from e
+
+            return _server.tool()(wrapper)
+
+        return register
+
+    def __getattr__(self, name):
+        return getattr(_server, name)
+
+
+server = _ToolRegistry()
 _monitor: Monitor | None = None
 
 

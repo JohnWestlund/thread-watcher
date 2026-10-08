@@ -98,7 +98,7 @@ class Monitor:
                 })
             self.store.mark_checked(p["post_id"])
             order = {"ask_owner": 0, "respond": 1, "fyi": 2, "skip": 3}
-            new.sort(key=lambda x: (order[x["signals"]["suggested_bucket"]], x["created_utc"]))
+            new.sort(key=lambda x: (order[x["signals"]["suggested_bucket"]], x["created_utc"] or 0))
             entry = {
                 "post_id": p["post_id"], "title": p["title"], "url": p["url"], "owner": owner,
                 "new_comment_count": len(new),

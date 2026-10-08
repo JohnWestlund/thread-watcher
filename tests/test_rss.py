@@ -65,6 +65,7 @@ def test_monitor_in_rss_mode():
         return pages[-1]
 
     client = RSSClient(fetch=fetch, min_interval=0)
+    client.CACHE_SECONDS = 0
     m = Monitor(client, Store(":memory:"), default_owner="")
     w = m.watch("https://www.reddit.com/r/Python/comments/abc123/i_built_a_thing/")
     assert w["owner"] == "Xenther"
