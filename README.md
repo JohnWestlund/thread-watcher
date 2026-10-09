@@ -30,9 +30,13 @@ The `triage_and_draft` prompt runs that whole loop. State lives in SQLite at `~/
 ## Two ways to read Reddit
 
 - **API mode** (full features): uses an approved Reddit app through PRAW. Chosen automatically when `REDDIT_CLIENT_ID` is set.
-- **RSS mode** (no credentials): reads the post's public comment feed (the post URL + `.rss`). Use it while waiting for API approval. The feed is flat, so it can't tell what a comment is replying to, has no scores or author age/karma, and doesn't notice when you've replied. Every comment on your post is treated as possibly aimed at you, and you tell Claude "I replied to that one" to close it out. The feed holds the newest 100 comments, so on a busy thread check often enough to not miss any.
+- **RSS mode** (no credentials): reads the post's public comment feed (the post URL + `.rss`), within Reddit's RSS rate limits. The feed is flat, so it can't tell what a comment is replying to, has no scores or author age/karma, and doesn't notice when you've replied. Every comment on your post is treated as possibly aimed at you, and you tell Claude "I replied to that one" to close it out. The feed holds the newest 100 comments, so on a busy thread check often enough to not miss any.
 
 Set `REDDIT_BACKEND=rss` or `=api` to force one.
+
+## Privacy
+
+See [PRIVACY.md](PRIVACY.md) for what the tool reads, what it stores, and where comment text goes.
 
 ## Setup
 
